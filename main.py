@@ -9,6 +9,9 @@ import os.path
 from deepdiff import DeepDiff
 from pprint import pprint
 
+# To do
+# Handle the case where there are new links added to .txt file and the first json is already live.
+
 
 class Product(object):
     title = ""
