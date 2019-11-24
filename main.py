@@ -6,39 +6,44 @@ import json
 import requests
 import re
 import os.path
+from deepdiff import DeepDiff
+from pprint import pprint
 
-# Initial iteration, set the template for each product
-# Second iteration, compare to the previous -> objects
+# To do
+# Fix the way you generate json, without the extra []
 
 
 class Product(object):
     title = ""
     array_of_resealed_prices = []
-    date_scrapped = ""
     number_of_resealed_products = 0
 
-    def __init__(self, title, array_of_resealed_prices, date_scrapped, number_of_resealed_products):
+    def __init__(self, title, array_of_resealed_prices, number_of_resealed_products):
         self.title = title
         self.array_of_resealed_prices = array_of_resealed_prices
-        self.date_scrapped = date_scrapped
         self.number_of_resealed_products = number_of_resealed_products
 
 
-def make_product(title, number_of_resealed_products, array_of_resealed_prices, date_scrapped):
+def make_product(title, number_of_resealed_products, array_of_resealed_prices):
     Product = namedtuple(
-        'Product', 'title number_of_resealed_products array_of_resealed_prices date_scrapped')
-    product = Product(title, number_of_resealed_products, array_of_resealed_prices,
-                      date_scrapped)
+        'Product', 'title number_of_resealed_products array_of_resealed_prices')
+    product = Product(title, number_of_resealed_products,
+                      array_of_resealed_prices)
+
     return product
 
 
+# Variables
 new_list_of_products = []
 array_of_formatted_prices = []
-now = datetime.now()
-all_products_selector = '.panel-resealed-products .product-resealed-price'
+old_list_of_formatted_products = []
 number_of_resealed_products = 0
+products_json_file = 'products.json'
+found_changes = False
+now = datetime.now()
 
-# Get the list of links from file
+
+# Get the list of links from txt file
 with open('links.txt', 'r') as f:
     linksList = f.read().splitlines()
 
@@ -48,70 +53,75 @@ for link in linksList:
     content = source.content
     soup = BeautifulSoup(content, "lxml")
 
-    # Title
+    # Get title
     title = soup.select('.page-title')[0].text
 
-    # Array of all products
+    # Get array of all products
     array_of_resealed_prices = soup.find_all(
         'p', {'class': 'product-resealed-price'})
 
+    # Format the array of prices and get the length of the array
     for el in array_of_resealed_prices:
         formattedItem = el.text.strip()
         intParsedItem = re.sub(r"\D", "", formattedItem)
         array_of_formatted_prices.append(int(intParsedItem[:-2]))
 
+    array_of_formatted_prices.sort()
     number_of_resealed_products = len(array_of_formatted_prices)
 
-    # Date
+    # Get the current date
     date_scrapped = now.strftime("%d/%m/%Y, %H:%M:%S")
 
-    # Create the object
+    # Create the Product object using the scrapped data and add it to $new_list_of_products
     final_product = make_product(
-        title.strip(), number_of_resealed_products, array_of_formatted_prices, date_scrapped)
+        title.strip(), number_of_resealed_products, array_of_formatted_prices)
 
     new_list_of_products.append(final_product)
 
-    # Empty the array so it can hold only the values of the current Product
+    # Reainitialize the variables for the next iteration
     array_of_formatted_prices = []
     number_of_resealed_products = 0
 
 
-# print(new_list_of_products)
-
-
-products_json_file = 'products.json'
-
-# Check if the json is already created
+# Compare with the existing json
 if(os.path.exists(products_json_file)):
-    old_list_of_products = []
     with open('products.json') as json_file:
-        data = json.load(json_file)
-        for product in data['Products']:
-            objectified_product = make_product(
-                product['title'], product['number_of_resealed_products'], product['array_of_resealed_prices'], product['date_scrapped'])
-            old_list_of_products.append(objectified_product)
+        # Read the current json file
 
-    # Compare the lists
-    print('Old list')
-    print(old_list_of_products)
-    print('New list')
-    print(new_list_of_products)
+        old_list_of_products = json.load(json_file)
 
-    # To do
-    # Compare the old and new list of products
-    # If there are differences, return them (link + number of products in resealed)
+    # Convert the old json to the same obj type as the new list
+    for product in old_list_of_products:
+        old_object = make_product(
+            product['title'], product['number_of_resealed_products'], product['array_of_resealed_prices'])
 
+        old_list_of_formatted_products.append(old_object)
 
+    # DeepDiff() checks for any differences and returns a DeepDiff object
+    analyzed_object = DeepDiff(new_list_of_products,
+                               old_list_of_formatted_products)
+
+    # Convert the DeepDiff object to a dict
+    # Iterate over it, if there are changes:
+    # print the changed products
+    analyzed_object.to_dict()
+    for key, value in analyzed_object['type_changes'].items():
+        if (value['new_value'] != value['old_value']):
+            print('Found the following changes:')
+            pprint(value['new_value'])
+            found_changes = True
+
+    # Overwrite the existing json file with the new list
+    if (found_changes):
+        print('Overwriting the existing json file...')
+        f = open(products_json_file, "w+")
+        now_content = simplejson.dumps(new_list_of_products)
+        f.write(now_content)
+
+# Else create the json file
 else:
-    # Write the json
-    current_content = {
-        "Products": [
-
-        ]
-    }
-    current_content["Products"].append(new_list_of_products)
-    # Open the json file
-    print('Opening json file...')
+    print('Creating the first json file...')
     f = open(products_json_file, "w+")
-    now_content = simplejson.dumps(current_content)
+    now_content = simplejson.dumps(new_list_of_products)
     f.write(now_content)
+    print('First scrape completed successfully.')
