@@ -9,25 +9,24 @@ import os.path
 from deepdiff import DeepDiff
 from pprint import pprint
 
-# To do
-# Fix the way you generate json, without the extra []
-
 
 class Product(object):
     title = ""
+    original_price = ""
     array_of_resealed_prices = []
     number_of_resealed_products = 0
 
-    def __init__(self, title, array_of_resealed_prices, number_of_resealed_products):
+    def __init__(self, title, original_price, array_of_resealed_prices, number_of_resealed_products):
         self.title = title
+        self.original_price = original_price
         self.array_of_resealed_prices = array_of_resealed_prices
         self.number_of_resealed_products = number_of_resealed_products
 
 
-def make_product(title, number_of_resealed_products, array_of_resealed_prices):
+def make_product(title, original_price, number_of_resealed_products, array_of_resealed_prices):
     Product = namedtuple(
-        'Product', 'title number_of_resealed_products array_of_resealed_prices')
-    product = Product(title, number_of_resealed_products,
+        'Product', 'title original_price number_of_resealed_products array_of_resealed_prices')
+    product = Product(title, original_price, number_of_resealed_products,
                       array_of_resealed_prices)
 
     return product
@@ -42,6 +41,13 @@ products_json_file = 'products.json'
 found_changes = False
 now = datetime.now()
 
+# Functions
+
+
+def parse_to_int(string):
+    string.strip()
+    return re.sub(r"\D", "", string)
+
 
 # Get the list of links from txt file
 with open('links.txt', 'r') as f:
@@ -53,17 +59,24 @@ for link in linksList:
     content = source.content
     soup = BeautifulSoup(content, "lxml")
 
-    # Get title
+    # Get the title
     title = soup.select('.page-title')[0].text
 
-    # Get array of all products
+    # Get the original price
+    original_price = soup.select(
+        '.main-product-form .product-new-price')[0].text
+
+    parsed_price = parse_to_int(original_price)
+    final_parsed_price = int(parsed_price[:-2])
+
+    # Get the array of all products
     array_of_resealed_prices = soup.find_all(
         'p', {'class': 'product-resealed-price'})
 
     # Format the array of prices and get the length of the array
     for el in array_of_resealed_prices:
         formattedItem = el.text.strip()
-        intParsedItem = re.sub(r"\D", "", formattedItem)
+        intParsedItem = parse_to_int(formattedItem)
         array_of_formatted_prices.append(int(intParsedItem[:-2]))
 
     array_of_formatted_prices.sort()
@@ -74,7 +87,7 @@ for link in linksList:
 
     # Create the Product object using the scrapped data and add it to $new_list_of_products
     final_product = make_product(
-        title.strip(), number_of_resealed_products, array_of_formatted_prices)
+        title.strip(), final_parsed_price, number_of_resealed_products, array_of_formatted_prices)
 
     new_list_of_products.append(final_product)
 
@@ -93,22 +106,21 @@ if(os.path.exists(products_json_file)):
     # Convert the old json to the same obj type as the new list
     for product in old_list_of_products:
         old_object = make_product(
-            product['title'], product['number_of_resealed_products'], product['array_of_resealed_prices'])
+            product['title'], product['original_price'], product['number_of_resealed_products'], product['array_of_resealed_prices'])
 
         old_list_of_formatted_products.append(old_object)
 
     # DeepDiff() checks for any differences and returns a DeepDiff object
-    analyzed_object = DeepDiff(new_list_of_products,
-                               old_list_of_formatted_products)
+    analyzed_object = DeepDiff(
+        new_list_of_products, old_list_of_formatted_products)
 
-    # Convert the DeepDiff object to a dict
-    # Iterate over it, if there are changes:
-    # print the changed products
     analyzed_object.to_dict()
+
     for key, value in analyzed_object['type_changes'].items():
         if (value['new_value'] != value['old_value']):
             print('Found the following changes:')
             pprint(value['new_value'])
+            print('Moment scrapped: ' + date_scrapped)
             found_changes = True
 
     # Overwrite the existing json file with the new list
