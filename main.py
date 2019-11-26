@@ -1,16 +1,58 @@
 from bs4 import BeautifulSoup
 from collections import namedtuple
 from datetime import datetime
+from deepdiff import DeepDiff
+from pprint import pprint
 import simplejson
 import json
 import requests
+import secrets
 import re
 import os.path
-from deepdiff import DeepDiff
-from pprint import pprint
+import time
+
 
 # To do
 # Handle the case where there are new links added to .txt file and the first json is already live.
+
+
+# Telegram configs
+# random_token = secrets.token_urlsafe(8)
+# https://api.telegram.org/bot974325358:AAHMadWgjB59AARPGo95_ASE_ORoPspATLk/getUpdates
+
+telegram_url = 'https://www.telegram.me'
+bot_name = 'emag_scrapper_bot'
+# token = random_token
+
+
+# Very secret bot token, might wanna hide it in the future somehow..
+bot_token = '974325358:AAHMadWgjB59AARPGo95_ASE_ORoPspATLk'
+updates_url = f'https://api.telegram.org/bot{bot_token}/getUpdates'
+
+# url = f'{telegram_url}/{bot_name}?start={token}'
+# Whene there is a new user you can find this token..
+# => '/start uEDbtJFHxKc'splitted_text = text.split(' ')# => ['/start', 'uEDbtJFHxKc']token = splitted_text[-1]# => 'uEDbtJFHxKc'
+
+# response = requests.get(updates_url).json()
+# splitted_text = text.split(' ')
+# connect_token = splitted_text[-1]
+
+
+liviu_chat_id = '358903325'
+david_chat_id = '715166577'
+
+product_title = ''
+product_original_price = 0
+product_smallest_resealed_price = 0
+product_url = ''
+product_date_scrapped = ''
+
+# notification_text = f'A aparut o modificare la produsul: {product_title},
+# pret: {product_original_price},
+# cel mai ieftin resigilat: {product_smallest_resealed_price},
+# link-> {product_url} '
+# send_message_url = f'https://api.telegram.org/bot{bot_token}/sendMessage?chat_id={david_chat_id}&text={notification_text}&parse_mode=markdown'
+# requests.post(send_message_url)
 
 
 class Product(object):
@@ -19,18 +61,19 @@ class Product(object):
     array_of_resealed_prices = []
     number_of_resealed_products = 0
 
-    def __init__(self, title, original_price, array_of_resealed_prices, number_of_resealed_products):
+    def __init__(self, title, original_price, array_of_resealed_prices, number_of_resealed_products, product_url):
         self.title = title
         self.original_price = original_price
         self.array_of_resealed_prices = array_of_resealed_prices
         self.number_of_resealed_products = number_of_resealed_products
+        self.product_url = product_url
 
 
-def make_product(title, original_price, number_of_resealed_products, array_of_resealed_prices):
+def make_product(title, original_price, number_of_resealed_products, array_of_resealed_prices, product_url):
     Product = namedtuple(
-        'Product', 'title original_price number_of_resealed_products array_of_resealed_prices')
+        'Product', 'title original_price number_of_resealed_products array_of_resealed_prices product_url')
     product = Product(title, original_price, number_of_resealed_products,
-                      array_of_resealed_prices)
+                      array_of_resealed_prices, product_url)
 
     return product
 
@@ -58,6 +101,7 @@ with open('links.txt', 'r') as f:
 
 # Navigate to each link and create a list of objects from the results
 for link in linksList:
+    time.sleep(3)
     source = requests.get(link)
     content = source.content
     soup = BeautifulSoup(content, "lxml")
@@ -90,7 +134,7 @@ for link in linksList:
 
     # Create the Product object using the scrapped data and add it to $new_list_of_products
     final_product = make_product(
-        title.strip(), final_parsed_price, number_of_resealed_products, array_of_formatted_prices)
+        title.strip(), final_parsed_price, number_of_resealed_products, array_of_formatted_prices, link)
 
     new_list_of_products.append(final_product)
 
@@ -109,7 +153,7 @@ if(os.path.exists(products_json_file)):
     # Convert the old json to the same obj type as the new list
     for product in old_list_of_products:
         old_object = make_product(
-            product['title'], product['original_price'], product['number_of_resealed_products'], product['array_of_resealed_prices'])
+            product['title'], product['original_price'], product['number_of_resealed_products'], product['array_of_resealed_prices'], product['product_url'])
 
         old_list_of_formatted_products.append(old_object)
 
@@ -120,11 +164,28 @@ if(os.path.exists(products_json_file)):
     analyzed_object.to_dict()
 
     for key, value in analyzed_object['type_changes'].items():
+        # Send what's new in the new values list
+
         if (value['new_value'] != value['old_value']):
-            print('Found the following changes:')
-            pprint(value['new_value'])
-            print('Moment scrapped: ' + date_scrapped)
+            print('Found changes, sending the notification...')
+            product_title = value['new_value'].title
+            product_original_price = f"{value['new_value'].original_price} RON"
+            if (value['new_value'].array_of_resealed_prices != []):
+                product_smallest_resealed_price = f"{min(value['new_value'].array_of_resealed_prices)} RON"
+            else:
+                product_smallest_resealed_price = 'Nu exista resigilate.'
+            product_url = value['new_value'].product_url
+            # product_date_scrapped = date_scrapped
+
+            notification_text = 'A aparut o modificare la produsul: ' + product_title + ' |' + ' pret: ' + \
+                product_original_price + ' |' + ' cel mai ieftin resigilat: ' + \
+                product_smallest_resealed_price + ' | ' + product_url
+
+            send_message_url = f'https://api.telegram.org/bot{bot_token}/sendMessage?chat_id={liviu_chat_id}&text={notification_text}&parse_mode=markdown'
+            requests.post(send_message_url)
+
             found_changes = True
+            print('Notifications sent succesfully.')
 
     # Overwrite the existing json file with the new list
     if (found_changes):
