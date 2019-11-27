@@ -95,13 +95,19 @@ def parse_to_int(string):
     return re.sub(r"\D", "", string)
 
 
+def remove_url_parameters(url):
+    if(url.find('?') != -1):
+        return url.split('?', 1)[0]
+    return url
+
+
 # Get the list of links from txt file
 with open('links.txt', 'r') as f:
     linksList = f.read().splitlines()
 
 # Navigate to each link and create a list of objects from the results
 for link in linksList:
-    time.sleep(3)
+    # time.sleep(3)
     source = requests.get(link)
     content = source.content
     soup = BeautifulSoup(content, "lxml")
@@ -134,7 +140,7 @@ for link in linksList:
 
     # Create the Product object using the scrapped data and add it to $new_list_of_products
     final_product = make_product(
-        title.strip(), final_parsed_price, number_of_resealed_products, array_of_formatted_prices, link)
+        title.strip().replace('"', ' Inch'), final_parsed_price, number_of_resealed_products, array_of_formatted_prices, remove_url_parameters(link))
 
     new_list_of_products.append(final_product)
 
@@ -177,11 +183,13 @@ if(os.path.exists(products_json_file)):
             product_url = value['new_value'].product_url
             # product_date_scrapped = date_scrapped
 
-            notification_text = 'A aparut o modificare la produsul: ' + product_title + ' |' + ' pret: ' + \
-                product_original_price + ' |' + ' cel mai ieftin resigilat: ' + \
-                product_smallest_resealed_price + ' | ' + product_url
+            notification_text = "A aparut o modificare la produsul: " + product_title + " |" + " pret: " + \
+                product_original_price + " |" + " cel mai ieftin resigilat: " + \
+                product_smallest_resealed_price + " | " + product_url
 
-            send_message_url = f'https://api.telegram.org/bot{bot_token}/sendMessage?chat_id={liviu_chat_id}&text={notification_text}&parse_mode=markdown'
+            print(product_url)
+            send_message_url = "https://api.telegram.org/bot"+bot_token+"/sendMessage?chat_id=" + \
+                david_chat_id+"&text="+notification_text+"&parse_mode=markdown"
             requests.post(send_message_url)
 
             found_changes = True
@@ -193,6 +201,9 @@ if(os.path.exists(products_json_file)):
         f = open(products_json_file, "w+")
         now_content = simplejson.dumps(new_list_of_products)
         f.write(now_content)
+        found_changes = False
+    else:
+        print('Found nothing. Script closing..')
 
 # Else create the json file
 else:
