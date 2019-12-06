@@ -14,6 +14,11 @@ import time
 
 # To do
 # Handle the case where there are new links added to .txt file and the first json is already live.
+# Limita de max 10 linkuri pentru fiecare user.
+# /add [link] -> ia link unul dupa altul. -> feedback for each action
+# /remove [link]
+# /list
+# /ciordelo ->
 
 
 # Telegram configs
@@ -23,7 +28,6 @@ import time
 telegram_url = 'https://www.telegram.me'
 bot_name = 'emag_scrapper_bot'
 # token = random_token
-
 
 # Very secret bot token, might wanna hide it in the future somehow..
 bot_token = '974325358:AAHMadWgjB59AARPGo95_ASE_ORoPspATLk'
@@ -46,13 +50,6 @@ product_original_price = 0
 product_smallest_resealed_price = 0
 product_url = ''
 product_date_scrapped = ''
-
-# notification_text = f'A aparut o modificare la produsul: {product_title},
-# pret: {product_original_price},
-# cel mai ieftin resigilat: {product_smallest_resealed_price},
-# link-> {product_url} '
-# send_message_url = f'https://api.telegram.org/bot{bot_token}/sendMessage?chat_id={david_chat_id}&text={notification_text}&parse_mode=markdown'
-# requests.post(send_message_url)
 
 
 class Product(object):
