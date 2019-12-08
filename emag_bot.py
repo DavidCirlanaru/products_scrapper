@@ -35,7 +35,10 @@ def main():
         chat_data = context.bot.getChat(update.message.chat_id)
         current_user = chat_data['username']
         db_user = db.list_user(current_user)
-        product_links_list = db_user['urls']
+        if (db_user is not None):
+            product_links_list = db_user['urls']
+        else:
+            product_links_list = []
         print(product_links_list)
         url = format_url(update.message.text)
 

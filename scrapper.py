@@ -3,10 +3,10 @@ from collections import namedtuple
 from datetime import datetime
 from deepdiff import DeepDiff
 from pprint import pprint
+from db import add_user, list_user
 import simplejson
 import json
 import requests
-import secrets
 import re
 import os.path
 import time
@@ -27,6 +27,20 @@ product_smallest_resealed_price = 0
 product_url = ''
 product_date_scrapped = ''
 
+
+# To do
+# funct (username), when called, look for the user in the database and get his links
+# create a json with the results for that user.
+# When you add a new element, the array of urls becomes array of objects
+# name
+# products[
+# title
+# original_price
+# number_of_resealed_products
+# array_of_resealed_prices
+# product_url
+# ]
+    
 
 class Product(object):
     title = ""
