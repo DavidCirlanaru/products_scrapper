@@ -12,15 +12,15 @@ users = db.users
 def add_user(name, urls):
     query = users.find_one({"name": name})
     if (query is not None):
-        users.find_one_and_update({"name": name},  {"$set": {"urls": urls}})
+        users.find_one_and_update({"name": name},
+                                  {"$set": {"urls": urls}})
         return
 
     user_data = {
         'name': name,
         'urls': urls
     }
-    result = users.insert_one(user_data)
-    return result
+    users.insert_one(user_data)
 
 
 def list_user(name):
@@ -30,6 +30,9 @@ def list_user(name):
     print('Not found')
 
 
-# def delete_link(name, index):
-
-    # delete_link('Liviu', 1)
+def delete_link(name, index):
+    query = users.find_one({"name": name})
+    if (query is not None):
+        users.update_one(
+            {'name': name}, {'$unset': {f'urls.{index}': 1}})
+        users.update_one({'name': name}, {'$pull': {'urls': None}})

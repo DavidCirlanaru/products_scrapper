@@ -1,5 +1,6 @@
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, InlineQueryHandler, CallbackContext
 from telegram import InlineQueryResultArticle, InputTextMessageContent
+from validators import validate_url
 import re
 import requests
 import os
@@ -7,14 +8,11 @@ import sys
 from threading import Thread
 import db
 
-
-# Vars
-product_link_list = []
-
 # Functions
 
 
 def format_url(url):
+    url.strip()
     if(url.find('?') != -1):
         formated_url = remove_command_prefix(url)
         return formated_url.split('?', 1)[0]
@@ -34,45 +32,79 @@ def main():
 
     def add(update, context):
         chat_id = update.effective_chat.id
+        chat_data = context.bot.getChat(update.message.chat_id)
+        current_user = chat_data['username']
+        db_user = db.list_user(current_user)
+        product_links_list = db_user['urls']
+        print(product_links_list)
         url = format_url(update.message.text)
-        if (url in product_link_list):
+
+        if (validate_url(url) is True):
+
+            if (url in product_links_list):
+                context.bot.send_message(
+                    chat_id, text='The link is already in the list.')
+                return
+
+            if(len(product_links_list) >= 10):
+                context.bot.send_message(
+                    chat_id, text='Exceeded the maximum number of links in the list.')
+                return
+
+            # Add the link
+            product_links_list.append(url)
+            db.add_user(current_user, product_links_list)
+            context.bot.send_message(chat_id, text='Link added.')
+            print(product_links_list)
+        else:
             context.bot.send_message(
-                chat_id, text='The link is already in the list.')
-            return
-        if(len(product_link_list) >= 10):
-            context.bot.send_message(
-                chat_id, text='Exceeded the maximum number of links in the list.')
-            return
-        product_link_list.append(url)
-        context.bot.send_message(chat_id, text='Link added.')
-        print(product_link_list)
+                chat_id, text='URL not valid, please try again.')
 
     def delete(update, context):
         chat_id = update.effective_chat.id
+        chat_data = context.bot.getChat(update.message.chat_id)
+        current_user = chat_data['username']
+        db_user = db.list_user(current_user)
+        product_links_list = db_user['urls']
+
         index_to_remove = remove_command_prefix(update.message.text)
         index_to_remove = int(index_to_remove)
-        if (index_to_remove > 0 and index_to_remove <= 11 and product_link_list is not []):
-            context.bot.send_message(
-                chat_id, text='Deleting link number ' + str(index_to_remove) + '..')
-            del product_link_list[int(index_to_remove) - 1]
-            print(product_link_list)
-            context.bot.send_message(
-                chat_id, text='Deleted succesfuly.')
-            return product_link_list
+        index = index_to_remove - 1
+        if (index_to_remove > 0 and index_to_remove <= 11 and product_links_list is not []):
+            try:
+                context.bot.send_message(
+                    chat_id, text='Deleting product ' + str(index_to_remove))
+
+                # del product_links_list[int(index_to_remove) - 1]
+                db.delete_link(current_user, index)
+                print(product_links_list)
+                context.bot.send_message(
+                    chat_id, text=f'Deleted {product_links_list[index]}')
+                return product_links_list
+            except IndexError:
+                context.bot.send_message(
+                    chat_id, text=f'No product with number {index_to_remove} found.')
+
         else:
             context.bot.send_message(
-                chat_id, text='Invalid request. Please try a different link number')
+                chat_id, text='Invalid request. Please try a different link number.')
             return
 
     def links_list(update, context):
         chat_id = update.effective_chat.id
-        if len(product_link_list) == 0:
+        chat_data = context.bot.getChat(update.message.chat_id)
+        current_user = chat_data['username']
+        db_user = db.list_user(current_user)
+        product_links_list = db_user['urls']
+
+        if len(product_links_list) == 0:
             context.bot.send_message(
                 chat_id, text='The list is empty.')
             return
 
         index = 1
-        for link in product_link_list:
+        for link in product_links_list:
+            print(link)
             context.bot.send_message(chat_id, text=str(index)+"| " + link)
             index += 1
 

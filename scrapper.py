@@ -11,36 +11,12 @@ import re
 import os.path
 import time
 
-
-# To do
-# Handle the case where there are new links added to .txt file and the first json is already live.
-# Limita de max 10 linkuri pentru fiecare user.
-# /add [link] -> ia link unul dupa altul. -> feedback for each action
-# /remove [link]
-# /list
-# /ciordelo ->
-
-
-# Telegram configs
-# random_token = secrets.token_urlsafe(8)
-# https://api.telegram.org/bot974325358:AAHMadWgjB59AARPGo95_ASE_ORoPspATLk/getUpdates
-
 telegram_url = 'https://www.telegram.me'
 bot_name = 'emag_scrapper_bot'
-# token = random_token
 
 # Very secret bot token, might wanna hide it in the future somehow..
 bot_token = '974325358:AAHMadWgjB59AARPGo95_ASE_ORoPspATLk'
 updates_url = f'https://api.telegram.org/bot{bot_token}/getUpdates'
-
-# url = f'{telegram_url}/{bot_name}?start={token}'
-# Whene there is a new user you can find this token..
-# => '/start uEDbtJFHxKc'splitted_text = text.split(' ')# => ['/start', 'uEDbtJFHxKc']token = splitted_text[-1]# => 'uEDbtJFHxKc'
-
-# response = requests.get(updates_url).json()
-# splitted_text = text.split(' ')
-# connect_token = splitted_text[-1]
-
 
 liviu_chat_id = '358903325'
 david_chat_id = '715166577'
@@ -93,6 +69,7 @@ def parse_to_int(string):
 
 
 def remove_url_parameters(url):
+    url.strip()
     if(url.find('?') != -1):
         return url.split('?', 1)[0]
     return url
