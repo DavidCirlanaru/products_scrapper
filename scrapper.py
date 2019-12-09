@@ -3,7 +3,7 @@ from collections import namedtuple
 from datetime import datetime
 from deepdiff import DeepDiff
 from pprint import pprint
-from db import add_user, list_user
+import db
 import simplejson
 import json
 import requests
@@ -40,7 +40,7 @@ product_date_scrapped = ''
 # array_of_resealed_prices
 # product_url
 # ]
-    
+
 
 class Product(object):
     title = ""
@@ -89,55 +89,92 @@ def remove_url_parameters(url):
     return url
 
 
+# =================== Scrapping the data
+
+
+users = db.get_all_users()
+for user in users:
+
+    current_username = user['username']
+    linksList = user['urls']
+
+    for link in linksList:
+
+        # Check if the size of the products arrya == with the size of urls array..
+        if (db.products_field_exist(current_username)):
+            old_list_of_products = user['products']
+
+            analyzed_object = DeepDiff(
+                new_list_of_products, old_list_of_products)
+
+            print(analyzed_object.to_dict())
+
+            exit()
+            new_list_of_products = []
+
+        source = requests.get(link)
+        content = source.content
+        soup = BeautifulSoup(content, "lxml")
+
+        # Get the title
+        title = soup.select('.page-title')[0].text
+
+        # Get the original price
+        original_price = soup.select(
+            '.main-product-form .product-new-price')[0].text
+
+        parsed_price = parse_to_int(original_price)
+        final_parsed_price = int(parsed_price[:-2])
+
+        # Get the array of all products
+        array_of_resealed_prices = soup.find_all(
+            'p', {'class': 'product-resealed-price'})
+
+        # Format the array of prices and get the length of the array
+        for el in array_of_resealed_prices:
+            formattedItem = el.text.strip()
+            intParsedItem = parse_to_int(formattedItem)
+            array_of_formatted_prices.append(int(intParsedItem[:-2]))
+
+        array_of_formatted_prices.sort()
+        number_of_resealed_products = len(array_of_formatted_prices)
+
+        # Get the current date
+        date_scrapped = now.strftime("%d/%m/%Y, %H:%M:%S")
+
+        # Create the Product object using the scrapped data and add it to $new_list_of_products
+        new_product = make_product(
+            title.strip().replace('"', ' Inch'), final_parsed_price, number_of_resealed_products, array_of_formatted_prices, remove_url_parameters(link))
+
+        db.add_product_data(current_username, new_product)
+        new_list_of_products.append(new_product)
+        # ====
+
+        # Compare with the existing data
+
+        # exit()
+
+print(current_username)
+print(linksList)
+print('Exiting..')
+exit()
+
 # Get the list of links from txt file
-with open('links.txt', 'r') as f:
-    linksList = f.read().splitlines()
+# with open('links.txt', 'r') as f:
+#     linksList = f.read().splitlines()
 
 # Navigate to each link and create a list of objects from the results
-for link in linksList:
-    # time.sleep(3)
-    source = requests.get(link)
-    content = source.content
-    soup = BeautifulSoup(content, "lxml")
+# for link in linksList:
+# time.sleep(3)
 
-    # Get the title
-    title = soup.select('.page-title')[0].text
+new_list_of_products.append(final_product)
 
-    # Get the original price
-    original_price = soup.select(
-        '.main-product-form .product-new-price')[0].text
-
-    parsed_price = parse_to_int(original_price)
-    final_parsed_price = int(parsed_price[:-2])
-
-    # Get the array of all products
-    array_of_resealed_prices = soup.find_all(
-        'p', {'class': 'product-resealed-price'})
-
-    # Format the array of prices and get the length of the array
-    for el in array_of_resealed_prices:
-        formattedItem = el.text.strip()
-        intParsedItem = parse_to_int(formattedItem)
-        array_of_formatted_prices.append(int(intParsedItem[:-2]))
-
-    array_of_formatted_prices.sort()
-    number_of_resealed_products = len(array_of_formatted_prices)
-
-    # Get the current date
-    date_scrapped = now.strftime("%d/%m/%Y, %H:%M:%S")
-
-    # Create the Product object using the scrapped data and add it to $new_list_of_products
-    final_product = make_product(
-        title.strip().replace('"', ' Inch'), final_parsed_price, number_of_resealed_products, array_of_formatted_prices, remove_url_parameters(link))
-
-    new_list_of_products.append(final_product)
-
-    # Reainitialize the variables for the next iteration
-    array_of_formatted_prices = []
-    number_of_resealed_products = 0
+# Reainitialize the variables for the next iteration
+array_of_formatted_prices = []
+number_of_resealed_products = 0
 
 
-# Compare with the existing json
+# Compare with the existing data
 if(os.path.exists(products_json_file)):
     with open('products.json') as json_file:
         # Read the current json file

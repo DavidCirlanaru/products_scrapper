@@ -3,7 +3,7 @@ import db
 users = db.get_all_users()
 
 for user in users:
-    print(user['name'])
+    print(user['username'])
     print(user['urls'])
 # for each user get all ther urls.
 # la fiecare x minute
