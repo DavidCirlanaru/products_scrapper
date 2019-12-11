@@ -48,19 +48,19 @@ def delete_link(username, index):
 
 def add_product_data(username, product_data):
     users.find_one_and_update({"username": username},
-                              {"$set": {
-                                  "products": [
+                              {"$push": {
+                                  "products":
                                       {
-                                          'title': product_data.title,
-                                          'original_price': product_data.original_price,
-                                          'number_of_resealed_products': product_data.number_of_resealed_products,
-                                          'array_of_resealed_prices': product_data.array_of_resealed_prices,
-                                          'product_url': product_data.product_url
+                                          'title': product_data['title'],
+                                          'original_price': product_data['original_price'],
+                                          'number_of_resealed_products': product_data['number_of_resealed_products'],
+                                          'array_of_resealed_prices': product_data['array_of_resealed_prices'],
+                                          'product_url': product_data['product_url']
                                       }
-                                  ]}}, upsert=True)
+                              }}, upsert=True)
 
 
-def products_field_exist(username):
+def products_field_exists(username):
     query = users.find({
         '$and': [
             {'username': username},
@@ -75,3 +75,17 @@ def products_field_exist(username):
     return False
 
 # Get the size of the products array, if it exists
+
+
+def get_size_of_products_array(username):
+    if (products_field_exists(username)):
+        return_data = users.aggregate([
+            {'$match': {'username': username}},
+            {'$project': {
+                'count': {'$size': '$products'}
+            }
+            }
+        ])
+        for result in return_data:
+            return result['count']
+    return 0

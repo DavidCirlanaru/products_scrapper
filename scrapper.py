@@ -94,23 +94,18 @@ def remove_url_parameters(url):
 
 users = db.get_all_users()
 for user in users:
-
     current_username = user['username']
     linksList = user['urls']
 
+    # Reainitialize the variables for the next iteration
+
     for link in linksList:
+        size_of_products_array = db.get_size_of_products_array(
+            current_username)
+        print(f'Products: ${size_of_products_array}')
+        print(f'Links list: ${len(linksList)}')
 
-        # Check if the size of the products arrya == with the size of urls array..
-        if (db.products_field_exist(current_username)):
-            old_list_of_products = user['products']
-
-            analyzed_object = DeepDiff(
-                new_list_of_products, old_list_of_products)
-
-            print(analyzed_object.to_dict())
-
-            exit()
-            new_list_of_products = []
+        time.sleep(2)
 
         source = requests.get(link)
         content = source.content
@@ -140,24 +135,51 @@ for user in users:
         number_of_resealed_products = len(array_of_formatted_prices)
 
         # Get the current date
-        date_scrapped = now.strftime("%d/%m/%Y, %H:%M:%S")
+        # date_scrapped = now.strftime("%d/%m/%Y, %H:%M:%S")
 
         # Create the Product object using the scrapped data and add it to $new_list_of_products
-        new_product = make_product(
-            title.strip().replace('"', ' Inch'), final_parsed_price, number_of_resealed_products, array_of_formatted_prices, remove_url_parameters(link))
+        new_product = {
+            'title': title.strip().replace('"', ' Inch'),
+            'original_price': final_parsed_price,
+            'number_of_resealed_products': number_of_resealed_products,
+            'array_of_resealed_prices': array_of_formatted_prices,
+            'product_url': remove_url_parameters(link)
+        }
 
         db.add_product_data(current_username, new_product)
+        print(f"Added ${new_product['title']} for ${current_username}..")
         new_list_of_products.append(new_product)
-        # ====
 
-        # Compare with the existing data
+        size_of_products_array = db.get_size_of_products_array(
+            current_username)
 
-        # exit()
+    # If the size of the urls array == the size of the products array
+    if (size_of_products_array is not None and size_of_products_array == len(linksList)):
+        print('Scrapped all products from url array..')
+        this_user = db.list_user(current_username)
+        old_list_of_products = this_user['products']
+        print(f'new: {new_list_of_products}, {type(new_list_of_products)}')
+        print(f'old: {old_list_of_products, type(old_list_of_products)}')
+        # To do.. convert lists to dicts..
+        analyzed_object = DeepDiff(
+            new_list_of_products, old_list_of_products)
 
-print(current_username)
-print(linksList)
-print('Exiting..')
-exit()
+        print(analyzed_object)
+
+        new_list_of_products = []
+        array_of_formatted_prices = []
+        number_of_resealed_products = 0    # Compare with the existing data
+        print('Process ended..')
+
+    # ====
+
+
+# exit()
+
+# print(current_username)
+# print(linksList)
+# print('Exiting..')
+# exit()
 
 # Get the list of links from txt file
 # with open('links.txt', 'r') as f:
@@ -167,73 +189,69 @@ exit()
 # for link in linksList:
 # time.sleep(3)
 
-new_list_of_products.append(final_product)
-
-# Reainitialize the variables for the next iteration
-array_of_formatted_prices = []
-number_of_resealed_products = 0
+# new_list_of_products.append(final_product)
 
 
-# Compare with the existing data
-if(os.path.exists(products_json_file)):
-    with open('products.json') as json_file:
-        # Read the current json file
+# # Compare with the existing data
+# if(os.path.exists(products_json_file)):
+#     with open('products.json') as json_file:
+#         # Read the current json file
 
-        old_list_of_products = json.load(json_file)
+#         old_list_of_products = json.load(json_file)
 
-    # Convert the old json to the same obj type as the new list
-    for product in old_list_of_products:
-        old_object = make_product(
-            product['title'], product['original_price'], product['number_of_resealed_products'], product['array_of_resealed_prices'], product['product_url'])
+#     # Convert the old json to the same obj type as the new list
+#     for product in old_list_of_products:
+#         old_object = make_product(
+#             product['title'], product['original_price'], product['number_of_resealed_products'], product['array_of_resealed_prices'], product['product_url'])
 
-        old_list_of_formatted_products.append(old_object)
+#         old_list_of_formatted_products.append(old_object)
 
-    # DeepDiff() checks for any differences and returns a DeepDiff object
-    analyzed_object = DeepDiff(
-        new_list_of_products, old_list_of_formatted_products)
+#     # DeepDiff() checks for any differences and returns a DeepDiff object
+#     analyzed_object = DeepDiff(
+#         new_list_of_products, old_list_of_formatted_products)
 
-    analyzed_object.to_dict()
+#     analyzed_object.to_dict()
 
-    for key, value in analyzed_object['type_changes'].items():
-        # Send what's new in the new values list
+#     for key, value in analyzed_object['type_changes'].items():
+#         # Send what's new in the new values list
 
-        if (value['new_value'] != value['old_value']):
-            print('Found changes, sending the notification...')
-            product_title = value['new_value'].title
-            product_original_price = f"{value['new_value'].original_price} RON"
-            if (value['new_value'].array_of_resealed_prices != []):
-                product_smallest_resealed_price = f"{min(value['new_value'].array_of_resealed_prices)} RON"
-            else:
-                product_smallest_resealed_price = 'Nu exista resigilate.'
-            product_url = value['new_value'].product_url
-            # product_date_scrapped = date_scrapped
+#         if (value['new_value'] != value['old_value']):
+#             print('Found changes, sending the notification...')
+#             product_title = value['new_value'].title
+#             product_original_price = f"{value['new_value'].original_price} RON"
+#             if (value['new_value'].array_of_resealed_prices != []):
+#                 product_smallest_resealed_price = f"{min(value['new_value'].array_of_resealed_prices)} RON"
+#             else:
+#                 product_smallest_resealed_price = 'Nu exista resigilate.'
+#             product_url = value['new_value'].product_url
+#             # product_date_scrapped = date_scrapped
 
-            notification_text = "A aparut o modificare la produsul: " + product_title + " |" + " pret: " + \
-                product_original_price + " |" + " cel mai ieftin resigilat: " + \
-                product_smallest_resealed_price + " | " + product_url
+#             notification_text = "A aparut o modificare la produsul: " + product_title + " |" + " pret: " + \
+#                 product_original_price + " |" + " cel mai ieftin resigilat: " + \
+#                 product_smallest_resealed_price + " | " + product_url
 
-            print(product_url)
-            send_message_url = "https://api.telegram.org/bot"+bot_token+"/sendMessage?chat_id=" + \
-                david_chat_id+"&text="+notification_text+"&parse_mode=markdown"
-            requests.post(send_message_url)
+#             print(product_url)
+#             send_message_url = "https://api.telegram.org/bot"+bot_token+"/sendMessage?chat_id=" + \
+#                 david_chat_id+"&text="+notification_text+"&parse_mode=markdown"
+#             requests.post(send_message_url)
 
-            found_changes = True
-            print('Notifications sent succesfully.')
+#             found_changes = True
+#             print('Notifications sent succesfully.')
 
-    # Overwrite the existing json file with the new list
-    if (found_changes):
-        print('Overwriting the existing json file...')
-        f = open(products_json_file, "w+")
-        now_content = simplejson.dumps(new_list_of_products)
-        f.write(now_content)
-        found_changes = False
-    else:
-        print('Found nothing. Script closing..')
+#     # Overwrite the existing json file with the new list
+#     if (found_changes):
+#         print('Overwriting the existing json file...')
+#         f = open(products_json_file, "w+")
+#         now_content = simplejson.dumps(new_list_of_products)
+#         f.write(now_content)
+#         found_changes = False
+#     else:
+#         print('Found nothing. Script closing..')
 
-# Else create the json file
-else:
-    print('Creating the first json file...')
-    f = open(products_json_file, "w+")
-    now_content = simplejson.dumps(new_list_of_products)
-    f.write(now_content)
-    print('First scrape completed successfully.')
+# # Else create the json file
+# else:
+#     print('Creating the first json file...')
+#     f = open(products_json_file, "w+")
+#     now_content = simplejson.dumps(new_list_of_products)
+#     f.write(now_content)
+#     print('First scrape completed successfully.')
