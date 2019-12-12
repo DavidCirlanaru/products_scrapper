@@ -10,6 +10,7 @@ import requests
 import re
 import os.path
 import time
+import itertools
 
 telegram_url = 'https://www.telegram.me'
 bot_name = 'emag_scrapper_bot'
@@ -100,11 +101,7 @@ for user in users:
     # Reainitialize the variables for the next iteration
 
     for link in linksList:
-        size_of_products_array = db.get_size_of_products_array(
-            current_username)
-        print(f'Products: ${size_of_products_array}')
-        print(f'Links list: ${len(linksList)}')
-
+        print(f'Scrapping {link}...')
         time.sleep(2)
 
         source = requests.get(link)
@@ -138,6 +135,7 @@ for user in users:
         # date_scrapped = now.strftime("%d/%m/%Y, %H:%M:%S")
 
         # Create the Product object using the scrapped data and add it to $new_list_of_products
+
         new_product = {
             'title': title.strip().replace('"', ' Inch'),
             'original_price': final_parsed_price,
@@ -146,32 +144,77 @@ for user in users:
             'product_url': remove_url_parameters(link)
         }
 
-        db.add_product_data(current_username, new_product)
+        this_user = db.list_user(current_username)
+        try:
+            old_list_of_products = this_user['products']
+        except KeyError:
+            print('Products not found..')
+
+        # To do:
+        # Check if the obj about to add already exists.
+        # If exists, check if there are any differences between the existing and the one about to be inserted.
+        # If ther eare differences, replace the old with the new, and print it.
+
+        # Add the dict to database
+         db.add_product_data(current_username, new_product)
+
         print(f"Added ${new_product['title']} for ${current_username}..")
         new_list_of_products.append(new_product)
 
         size_of_products_array = db.get_size_of_products_array(
             current_username)
+        print(f'Products array size: {size_of_products_array}')
+        print(f'Links list size: {len(linksList)}')
 
     # If the size of the urls array == the size of the products array
     if (size_of_products_array is not None and size_of_products_array == len(linksList)):
         print('Scrapped all products from url array..')
-        this_user = db.list_user(current_username)
-        old_list_of_products = this_user['products']
-        print(f'new: {new_list_of_products}, {type(new_list_of_products)}')
-        print(f'old: {old_list_of_products, type(old_list_of_products)}')
+        # print(f'new: {new_list_of_products}, {type(new_list_of_products)}')
+        # print(f'old: {old_list_of_products, type(old_list_of_products)}')
         # To do.. convert lists to dicts..
-        analyzed_object = DeepDiff(
-            new_list_of_products, old_list_of_products)
 
-        print(analyzed_object)
+        differences = [i for i in new_list_of_products if i not in old_list_of_products] \
+            + [j for j in old_list_of_products if j not in new_list_of_products]
+        print(differences)
 
-        new_list_of_products = []
-        array_of_formatted_prices = []
-        number_of_resealed_products = 0    # Compare with the existing data
-        print('Process ended..')
+        if (differences is not[]):
+            for el in differences:
+                print(el['title'])
+        exit()
+    exit()
+    new_list_of_products = []
+    array_of_formatted_prices = []
+    number_of_resealed_products = 0    # Compare with the existing data
+    print('Process ended..')
 
     # ====
+
+#  for key, value in analyzed_object['type_changes'].items():
+#                 # Send what's new in the new values list
+#             if (value['new_value'] != value['old_value']):
+#                 print('Found changes, sending the notification...')
+#                 product_title = value['new_value']['title']
+#                 product_original_price = f"{value['new_value']['original_price']} RON"
+#                 if (value['new_value']['array_of_resealed_prices'] != []):
+#                     product_smallest_resealed_price = f"{min(value['new_value']['array_of_resealed_prices'])} RON"
+#                 else:
+#                     product_smallest_resealed_price = 'Nu exista resigilate.'
+#                 product_url = value['new_value']['product_url']
+#                 # product_date_scrapped = date_scrapped
+
+#                 notification_text = "A aparut o modificare la produsul: " + product_title + " |" + " pret: " + \
+#                     product_original_price + " |" + " cel mai ieftin resigilat: " + \
+#                     product_smallest_resealed_price + " | " + product_url
+
+#                 print(notification_text)
+#                 # send_message_url = "https://api.telegram.org/bot"+bot_token+"/sendMessage?chat_id=" + \
+#                 #     david_chat_id+"&text="+notification_text+"&parse_mode=markdown"
+#                 # requests.post(send_message_url)
+
+#                 found_changes = True
+#                 print('Notifications sent succesfully.')
+#             else:
+#                 print('No changes found')
 
 
 # exit()
