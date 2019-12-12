@@ -46,9 +46,32 @@ def delete_link(username, index):
         users.update_one({'username': username}, {'$pull': {'urls': None}})
 
 
+def overwrite_product_data(username, product_data):
+    users.find_one_and_update({"username": username},
+                              {"$pull": {
+                                  "products":
+                                      {
+                                          'title': product_data['title'],
+                                          'original_price': product_data['original_price'],
+                                          'number_of_resealed_products': product_data['number_of_resealed_products'],
+                                          'array_of_resealed_prices': product_data['array_of_resealed_prices'],
+                                          'product_url': product_data['product_url']
+                                      }}})
+
+    users.find_one_and_update({"username": username},
+                              {"$push": {
+                                  "products":
+                                      {
+                                          'title': product_data['title'],
+                                          'original_price': product_data['original_price'],
+                                          'number_of_resealed_products': product_data['number_of_resealed_products'],
+                                          'array_of_resealed_prices': product_data['array_of_resealed_prices'],
+                                          'product_url': product_data['product_url']
+                                      }}}, upsert=True)
+
+
 def add_product_data(username, product_data):
     if (products_field_exists(username) is True):
-        print('list here')
         users.find_one_and_update({"username": username},
                                   {"$addToSet": {
                                       "products":
@@ -61,7 +84,6 @@ def add_product_data(username, product_data):
                                       }
                                   }}, upsert=True)
     else:
-        print('list not here')
         users.find_one_and_update({"username": username},
                                   {"$push": {
                                       "products":
@@ -88,8 +110,6 @@ def products_field_exists(username):
             return True
 
     return False
-
-# Get the size of the products array, if it exists
 
 
 def get_size_of_products_array(username):

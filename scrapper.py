@@ -29,20 +29,6 @@ product_url = ''
 product_date_scrapped = ''
 
 
-# To do
-# funct (username), when called, look for the user in the database and get his links
-# create a json with the results for that user.
-# When you add a new element, the array of urls becomes array of objects
-# name
-# products[
-# title
-# original_price
-# number_of_resealed_products
-# array_of_resealed_prices
-# product_url
-# ]
-
-
 class Product(object):
     title = ""
     original_price = ""
@@ -97,10 +83,14 @@ users = db.get_all_users()
 for user in users:
     current_username = user['username']
     linksList = user['urls']
+    differences = []
+    old_list_of_products = []
+    new_list_of_products = []
 
     # Reainitialize the variables for the next iteration
 
     for link in linksList:
+        array_of_reselead_prices = []
         print(f'Scrapping {link}...')
         time.sleep(2)
 
@@ -144,48 +134,68 @@ for user in users:
             'product_url': remove_url_parameters(link)
         }
 
-        this_user = db.list_user(current_username)
-        try:
-            old_list_of_products = this_user['products']
-        except KeyError:
-            print('Products not found..')
-
         # To do:
         # Check if the obj about to add already exists.
         # If exists, check if there are any differences between the existing and the one about to be inserted.
         # If ther eare differences, replace the old with the new, and print it.
 
-        # Add the dict to database
-         db.add_product_data(current_username, new_product)
+        # # Add the dict to database
+        # db.add_product_data(current_username, new_product)
 
-        print(f"Added ${new_product['title']} for ${current_username}..")
         new_list_of_products.append(new_product)
 
-        size_of_products_array = db.get_size_of_products_array(
-            current_username)
+        size_of_products_array = len(new_list_of_products)
         print(f'Products array size: {size_of_products_array}')
         print(f'Links list size: {len(linksList)}')
 
-    # If the size of the urls array == the size of the products array
+        # Reinit vars
+        array_of_formatted_prices = []
+    # If the size of the urls array == the size of the new products array
     if (size_of_products_array is not None and size_of_products_array == len(linksList)):
         print('Scrapped all products from url array..')
-        # print(f'new: {new_list_of_products}, {type(new_list_of_products)}')
-        # print(f'old: {old_list_of_products, type(old_list_of_products)}')
-        # To do.. convert lists to dicts..
+        this_user = db.list_user(current_username)
 
-        differences = [i for i in new_list_of_products if i not in old_list_of_products] \
-            + [j for j in old_list_of_products if j not in new_list_of_products]
-        print(differences)
+        try:
+            old_list_of_products = this_user['products']
+        except KeyError:
+            old_list_of_products = []
+            print('Products array not available yet..')
 
-        if (differences is not[]):
-            for el in differences:
-                print(el['title'])
-        exit()
-    exit()
-    new_list_of_products = []
-    array_of_formatted_prices = []
-    number_of_resealed_products = 0    # Compare with the existing data
-    print('Process ended..')
+        for new_product in new_list_of_products:
+            db.add_product_data(current_username, new_product)
+            print(f"Added ${new_product['title']} for ${current_username}..")
+
+        if (not old_list_of_products):
+            print('Old list is empty')
+        else:
+            print(f'new: {new_list_of_products}, {type(new_list_of_products)}')
+            print(f'old: {old_list_of_products, type(old_list_of_products)}')
+
+            differences = [i for i in new_list_of_products if i not in old_list_of_products] \
+                + [j for j in old_list_of_products if j not in new_list_of_products]
+
+            # If there are no changes..
+            if (not differences):
+                print('No changes.')
+
+            else:
+                for old_product in old_list_of_products:
+                    db.overwrite_product_data(current_username, old_product)
+                print(f'Found this differences: {differences}')
+                for el in differences[::2]:
+                    print(el['title'])
+                new_product = None
+
+        differences = []
+        old_list_of_products = []
+        new_list_of_products = []
+        array_of_resealed_prices = []
+        this_user = None
+        array_of_formatted_prices = []
+        number_of_resealed_products = 0
+        print('Process ended..')
+        # exit()
+    # exit()
 
     # ====
 
