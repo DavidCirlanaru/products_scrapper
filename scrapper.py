@@ -1,16 +1,14 @@
 from bs4 import BeautifulSoup
-from collections import namedtuple
 from datetime import datetime
-from deepdiff import DeepDiff
-from pprint import pprint
 import db
-import simplejson
-import json
 import requests
 import re
-import os.path
 import time
-import itertools
+
+# To do
+# Hide the telegram token
+# TEst what happens when products array exists and user adds or removes urls..
+# Test multiple changes appear..
 
 telegram_url = 'https://www.telegram.me'
 bot_name = 'emag_scrapper_bot'
@@ -44,8 +42,6 @@ class Product(object):
 
 
 def make_product(title, original_price, number_of_resealed_products, array_of_resealed_prices, product_url):
-    Product = namedtuple(
-        'Product', 'title original_price number_of_resealed_products array_of_resealed_prices product_url')
     product = Product(title, original_price, number_of_resealed_products,
                       array_of_resealed_prices, product_url)
 
@@ -86,8 +82,7 @@ for user in users:
     differences = []
     old_list_of_products = []
     new_list_of_products = []
-
-    # Reainitialize the variables for the next iteration
+    current_chat_id = db.get_chat_id(current_username)
 
     for link in linksList:
         array_of_reselead_prices = []
@@ -125,7 +120,6 @@ for user in users:
         # date_scrapped = now.strftime("%d/%m/%Y, %H:%M:%S")
 
         # Create the Product object using the scrapped data and add it to $new_list_of_products
-
         new_product = {
             'title': title.strip().replace('"', ' Inch'),
             'original_price': final_parsed_price,
@@ -133,14 +127,6 @@ for user in users:
             'array_of_resealed_prices': array_of_formatted_prices,
             'product_url': remove_url_parameters(link)
         }
-
-        # To do:
-        # Check if the obj about to add already exists.
-        # If exists, check if there are any differences between the existing and the one about to be inserted.
-        # If ther eare differences, replace the old with the new, and print it.
-
-        # # Add the dict to database
-        # db.add_product_data(current_username, new_product)
 
         new_list_of_products.append(new_product)
 
@@ -178,14 +164,39 @@ for user in users:
             if (not differences):
                 print('No changes.')
 
+            # If there are changes found..
             else:
                 db.overwrite_product_data(
                     current_username, new_list_of_products)
-                print(f'Found this differences: {differences}')
-                for el in differences[::2]:
-                    print(el['title'])
+                print(f'Found this changes: {differences}')
+                for product in differences[::2]:
+                    print(product['title'])
                 new_product = None
 
+                print('Found changes, sending the notification...')
+                # ===================
+
+                product_title = product['title']
+                product_original_price = f"{product['original_price']} RON"
+                if (product['array_of_resealed_prices'] != []):
+                    product_smallest_resealed_price = f"{min(product['array_of_resealed_prices'])} RON"
+                else:
+                    product_smallest_resealed_price = 'Nu exista resigilate.'
+                product_url = product['product_url']
+                # product_date_scrapped = date_scrapped
+
+                notification_text = "Salut " + current_username + ", aparut o modificare la produsul: " + product_title + " |" + " pret: " + \
+                    product_original_price + " |" + " cel mai ieftin resigilat: " + \
+                    product_smallest_resealed_price + " | " + product_url
+                print(notification_text)
+
+                send_message_url = "https://api.telegram.org/bot"+bot_token+"/sendMessage?chat_id=" + \
+                    str(current_chat_id)+"&text=" + \
+                    notification_text+"&parse_mode=markdown"
+                requests.post(send_message_url)
+                # To do, function to accept the message as parameter from the emag_bot.py
+
+        message_data = None
         differences = []
         old_list_of_products = []
         new_list_of_products = []
@@ -193,118 +204,5 @@ for user in users:
         this_user = None
         array_of_formatted_prices = []
         number_of_resealed_products = 0
+        current_chat_id = None
         print('Process ended..')
-        # exit()
-    # exit()
-
-    # ====
-
-#  for key, value in analyzed_object['type_changes'].items():
-#                 # Send what's new in the new values list
-#             if (value['new_value'] != value['old_value']):
-#                 print('Found changes, sending the notification...')
-#                 product_title = value['new_value']['title']
-#                 product_original_price = f"{value['new_value']['original_price']} RON"
-#                 if (value['new_value']['array_of_resealed_prices'] != []):
-#                     product_smallest_resealed_price = f"{min(value['new_value']['array_of_resealed_prices'])} RON"
-#                 else:
-#                     product_smallest_resealed_price = 'Nu exista resigilate.'
-#                 product_url = value['new_value']['product_url']
-#                 # product_date_scrapped = date_scrapped
-
-#                 notification_text = "A aparut o modificare la produsul: " + product_title + " |" + " pret: " + \
-#                     product_original_price + " |" + " cel mai ieftin resigilat: " + \
-#                     product_smallest_resealed_price + " | " + product_url
-
-#                 print(notification_text)
-#                 # send_message_url = "https://api.telegram.org/bot"+bot_token+"/sendMessage?chat_id=" + \
-#                 #     david_chat_id+"&text="+notification_text+"&parse_mode=markdown"
-#                 # requests.post(send_message_url)
-
-#                 found_changes = True
-#                 print('Notifications sent succesfully.')
-#             else:
-#                 print('No changes found')
-
-
-# exit()
-
-# print(current_username)
-# print(linksList)
-# print('Exiting..')
-# exit()
-
-# Get the list of links from txt file
-# with open('links.txt', 'r') as f:
-#     linksList = f.read().splitlines()
-
-# Navigate to each link and create a list of objects from the results
-# for link in linksList:
-# time.sleep(3)
-
-# new_list_of_products.append(final_product)
-
-
-# # Compare with the existing data
-# if(os.path.exists(products_json_file)):
-#     with open('products.json') as json_file:
-#         # Read the current json file
-
-#         old_list_of_products = json.load(json_file)
-
-#     # Convert the old json to the same obj type as the new list
-#     for product in old_list_of_products:
-#         old_object = make_product(
-#             product['title'], product['original_price'], product['number_of_resealed_products'], product['array_of_resealed_prices'], product['product_url'])
-
-#         old_list_of_formatted_products.append(old_object)
-
-#     # DeepDiff() checks for any differences and returns a DeepDiff object
-#     analyzed_object = DeepDiff(
-#         new_list_of_products, old_list_of_formatted_products)
-
-#     analyzed_object.to_dict()
-
-#     for key, value in analyzed_object['type_changes'].items():
-#         # Send what's new in the new values list
-
-#         if (value['new_value'] != value['old_value']):
-#             print('Found changes, sending the notification...')
-#             product_title = value['new_value'].title
-#             product_original_price = f"{value['new_value'].original_price} RON"
-#             if (value['new_value'].array_of_resealed_prices != []):
-#                 product_smallest_resealed_price = f"{min(value['new_value'].array_of_resealed_prices)} RON"
-#             else:
-#                 product_smallest_resealed_price = 'Nu exista resigilate.'
-#             product_url = value['new_value'].product_url
-#             # product_date_scrapped = date_scrapped
-
-#             notification_text = "A aparut o modificare la produsul: " + product_title + " |" + " pret: " + \
-#                 product_original_price + " |" + " cel mai ieftin resigilat: " + \
-#                 product_smallest_resealed_price + " | " + product_url
-
-#             print(product_url)
-#             send_message_url = "https://api.telegram.org/bot"+bot_token+"/sendMessage?chat_id=" + \
-#                 david_chat_id+"&text="+notification_text+"&parse_mode=markdown"
-#             requests.post(send_message_url)
-
-#             found_changes = True
-#             print('Notifications sent succesfully.')
-
-#     # Overwrite the existing json file with the new list
-#     if (found_changes):
-#         print('Overwriting the existing json file...')
-#         f = open(products_json_file, "w+")
-#         now_content = simplejson.dumps(new_list_of_products)
-#         f.write(now_content)
-#         found_changes = False
-#     else:
-#         print('Found nothing. Script closing..')
-
-# # Else create the json file
-# else:
-#     print('Creating the first json file...')
-#     f = open(products_json_file, "w+")
-#     now_content = simplejson.dumps(new_list_of_products)
-#     f.write(now_content)
-#     print('First scrape completed successfully.')

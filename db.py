@@ -17,7 +17,14 @@ def get_all_users():
     return all_users_array
 
 
-def add_user(username, urls):
+def get_chat_id(username):
+    query = users.find_one({"username": username})
+    if (query is not None):
+        return query['chat_id']
+    print('Could not find the user with that username.')
+
+
+def add_user(username, urls, chat_id):
     query = users.find_one({"username": username})
     if (query is not None):
         users.find_one_and_update({"username": username},
@@ -26,6 +33,7 @@ def add_user(username, urls):
 
     user_data = {
         'username': username,
+        'chat_id': chat_id,
         'urls': urls
     }
     users.insert_one(user_data)
