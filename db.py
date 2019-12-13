@@ -48,26 +48,9 @@ def delete_link(username, index):
 
 def overwrite_product_data(username, product_data):
     users.find_one_and_update({"username": username},
-                              {"$pull": {
-                                  "products":
-                                      {
-                                          'title': product_data['title'],
-                                          'original_price': product_data['original_price'],
-                                          'number_of_resealed_products': product_data['number_of_resealed_products'],
-                                          'array_of_resealed_prices': product_data['array_of_resealed_prices'],
-                                          'product_url': product_data['product_url']
-                                      }}})
-
-    users.find_one_and_update({"username": username},
-                              {"$push": {
-                                  "products":
-                                      {
-                                          'title': product_data['title'],
-                                          'original_price': product_data['original_price'],
-                                          'number_of_resealed_products': product_data['number_of_resealed_products'],
-                                          'array_of_resealed_prices': product_data['array_of_resealed_prices'],
-                                          'product_url': product_data['product_url']
-                                      }}}, upsert=True)
+                              {"$set": {
+                                  "products": product_data
+                              }}, upsert=True)
 
 
 def add_product_data(username, product_data):

@@ -179,8 +179,8 @@ for user in users:
                 print('No changes.')
 
             else:
-                for old_product in old_list_of_products:
-                    db.overwrite_product_data(current_username, old_product)
+                db.overwrite_product_data(
+                    current_username, new_list_of_products)
                 print(f'Found this differences: {differences}')
                 for el in differences[::2]:
                     print(el['title'])
