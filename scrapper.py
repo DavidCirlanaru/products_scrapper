@@ -42,14 +42,16 @@ def remove_url_parameters(url):
 # =================== Scrapping the data
 users = db.get_all_users()
 for user in users:
-    current_username = user['username']
+    current_user_id = user['telegram_id']
+    current_user_first_name = user['first_name']
     linksList = user['urls']
     differences = []
     old_list_of_products = []
     new_list_of_products = []
-    current_chat_id = db.get_chat_id(current_username)
+    current_chat_id = current_user_id
 
     for link in linksList:
+
         array_of_reselead_prices = []
         print(f'Scrapping {link}...')
         time.sleep(2)
@@ -103,7 +105,7 @@ for user in users:
     # If the size of the urls array == the size of the new products array
     if (size_of_products_array is not None and size_of_products_array == len(linksList)):
         print('Scrapped all products from url array..')
-        this_user = db.list_user(current_username)
+        this_user = db.list_user(current_user_id)
 
         try:
             old_list_of_products = this_user['products']
@@ -112,18 +114,19 @@ for user in users:
             print('Products array not available yet..')
 
         # Adding the new list of products to the database
-        for new_product in new_list_of_products:
-            db.add_product_data(current_username, new_product)
-            print(f"Added ${new_product['title']} for ${current_username}..")
+        # for new_product in new_list_of_products:
+        db.add_product_data(current_user_id, new_list_of_products)
+        print(f"Added ${new_product['title']} for ${current_user_id}..")
 
         if (not old_list_of_products):
             print('Old list is empty')
         else:
-            print(f'new: {new_list_of_products}, {type(new_list_of_products)}')
-            print(f'old: {old_list_of_products, type(old_list_of_products)}')
+            # print(f'new: {new_list_of_products}, {type(new_list_of_products)}')
+            # print(f'old: {old_list_of_products, type(old_list_of_products)}')
 
-            differences = [i for i in new_list_of_products if i not in old_list_of_products] \
-                + [j for j in old_list_of_products if j not in new_list_of_products]
+            differences = [
+                i for i in new_list_of_products if i not in old_list_of_products]
+            # + [j for j in old_list_of_products if j not in new_list_of_products]
 
             if (not differences):
                 print('No changes.')
@@ -131,14 +134,14 @@ for user in users:
             # If there are changes found..
             else:
                 db.overwrite_product_data(
-                    current_username, new_list_of_products)
-                print(f'Found this changes: {differences}')
-                for product in differences[::2]:
+                    current_user_id, new_list_of_products)
+                # print(f'Found this changes: {differences}')
+                for product in differences:
                     print(product['title'])
                 new_product = None
 
+                # =================== Notifications =================== #
                 print('Found changes, sending the notification...')
-                # ===================
 
                 product_title = product['title']
                 product_original_price = f"{product['original_price']} RON"
@@ -149,10 +152,9 @@ for user in users:
                 product_url = product['product_url']
                 # product_date_scrapped = date_scrapped
 
-                notification_text = "Salut " + current_username + ", aparut o modificare la produsul: " + product_title + " |" + " pret: " + \
+                notification_text = "Salut " + current_user_first_name + ", aparut o modificare la produsul: " + product_title + " |" + " pret: " + \
                     product_original_price + " |" + " cel mai ieftin resigilat: " + \
                     product_smallest_resealed_price + " | " + product_url
-                print(notification_text)
 
                 send_message_url = "https://api.telegram.org/bot"+bot_token+"/sendMessage?chat_id=" + \
                     str(current_chat_id)+"&text=" + \
@@ -168,4 +170,4 @@ for user in users:
         array_of_formatted_prices = []
         number_of_resealed_products = 0
         current_chat_id = None
-        print('Process ended..')
+        print('Scrapper finished.')

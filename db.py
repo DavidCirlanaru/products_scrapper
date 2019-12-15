@@ -15,82 +15,59 @@ def get_all_users():
         all_users_array.append(document)
     return all_users_array
 
+# To modify from username to telegram id
 
-def get_chat_id(username):
-    query = users.find_one({"username": username})
+
+def add_user(telegram_id, username, first_name, urls):
+    query = users.find_one({"telegram_id": telegram_id})
     if (query is not None):
-        return query['chat_id']
-    print('Could not find the user with that username.')
-
-
-def add_user(username, urls, chat_id):
-    query = users.find_one({"username": username})
-    if (query is not None):
-        users.find_one_and_update({"username": username},
+        users.find_one_and_update({"telegram_id": telegram_id},
                                   {"$set": {"urls": urls}}, upsert=True)
         return
 
     user_data = {
+        'telegram_id': telegram_id,
         'username': username,
-        'chat_id': chat_id,
+        'first_name': first_name,
         'urls': urls
     }
     users.insert_one(user_data)
 
 
-def list_user(username):
-    query = users.find_one({"username": username})
+def list_user(telegram_id):
+    query = users.find_one({"telegram_id": telegram_id})
     if (query is not None):
         return query
-    print('Could not find the user with that username.')
+    print('Could not find the user with that id.')
 
 
-def delete_link(username, index):
-    query = users.find_one({"username": username})
+def delete_link(telegram_id, index):
+    query = users.find_one({"telegram_id": telegram_id})
     if (query is not None):
         users.update_one(
-            {'username': username}, {'$unset': {f'urls.{index}': 1}})
-        users.update_one({'username': username}, {'$pull': {'urls': None}})
+            {'telegram_id': telegram_id}, {'$unset': {f'urls.{index}': 1}})
+        users.update_one({'telegram_id': telegram_id},
+                         {'$pull': {'urls': None}})
 
 
-def overwrite_product_data(username, product_data):
-    users.find_one_and_update({"username": username},
+def overwrite_product_data(telegram_id, product_data):
+    users.find_one_and_update({"telegram_id": telegram_id},
                               {"$set": {
                                   "products": product_data
                               }}, upsert=True)
 
 
-def add_product_data(username, product_data):
-    if (products_field_exists(username) is True):
-        users.find_one_and_update({"username": username},
-                                  {"$addToSet": {
-                                      "products":
-                                      {
-                                          'title': product_data['title'],
-                                          'original_price': product_data['original_price'],
-                                          'number_of_resealed_products': product_data['number_of_resealed_products'],
-                                          'array_of_resealed_prices': product_data['array_of_resealed_prices'],
-                                          'product_url': product_data['product_url']
-                                      }
-                                  }}, upsert=True)
-    else:
-        users.find_one_and_update({"username": username},
-                                  {"$push": {
-                                      "products":
-                                      {
-                                          'title': product_data['title'],
-                                          'original_price': product_data['original_price'],
-                                          'number_of_resealed_products': product_data['number_of_resealed_products'],
-                                          'array_of_resealed_prices': product_data['array_of_resealed_prices'],
-                                          'product_url': product_data['product_url']
-                                      }
-                                  }}, upsert=True)
+def add_product_data(telegram_id, products_array):
+    users.find_one_and_update({"telegram_id": telegram_id},
+                              {"$set": {
+                                  "products": products_array
+                              }}, upsert=True)
 
 
-def products_field_exists(username):
+def products_field_exists(telegram_id):
     query = users.find({
         '$and': [
-            {'username': username},
+            {'telegram_id': telegram_id},
             {'products': {'$exists': True}}
         ]
     })
@@ -102,10 +79,10 @@ def products_field_exists(username):
     return False
 
 
-def get_size_of_products_array(username):
-    if (products_field_exists(username)):
+def get_size_of_products_array(telegram_id):
+    if (products_field_exists(telegram_id)):
         return_data = users.aggregate([
-            {'$match': {'username': username}},
+            {'$match': {'telegram_id': telegram_id}},
             {'$project': {
                 'count': {'$size': '$products'}
             }

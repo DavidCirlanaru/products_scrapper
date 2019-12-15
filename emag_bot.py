@@ -7,6 +7,7 @@ from threading import Thread
 import db
 import config
 
+
 # Functions
 
 
@@ -30,8 +31,10 @@ dispatcher = updater.dispatcher
 def add(update, context):
     chat_id = update.effective_chat.id
     chat_data = context.bot.getChat(update.message.chat_id)
-    current_user = chat_data['username']
-    db_user = db.list_user(current_user)
+    current_user_id = chat_data['id']
+    current_user_username = chat_data['username']
+    current_user_first_name = chat_data['first_name']
+    db_user = db.list_user(current_user_id)
     if (db_user is not None):
         product_links_list = db_user['urls']
     else:
@@ -52,7 +55,8 @@ def add(update, context):
 
         # Add the link
         product_links_list.append(url)
-        db.add_user(current_user, product_links_list, chat_id)
+        db.add_user(current_user_id, current_user_username,
+                    current_user_first_name,  product_links_list)
         context.bot.send_message(chat_id, text='Link added.')
         print(product_links_list)
     else:
@@ -63,7 +67,7 @@ def add(update, context):
 def delete(update, context):
     chat_id = update.effective_chat.id
     chat_data = context.bot.getChat(update.message.chat_id)
-    current_user = chat_data['username']
+    current_user = chat_data['id']
     db_user = db.list_user(current_user)
     product_links_list = db_user['urls']
 
@@ -94,7 +98,7 @@ def delete(update, context):
 def links_list(update, context):
     chat_id = update.effective_chat.id
     chat_data = context.bot.getChat(update.message.chat_id)
-    current_user = chat_data['username']
+    current_user = chat_data['id']
     db_user = db.list_user(current_user)
     product_links_list = db_user['urls']
 
