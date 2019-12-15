@@ -6,11 +6,6 @@ import re
 import time
 import config
 
-# To do
-# TEst what happens when products array exists and user adds or removes urls..
-# Test multiple changes appear..
-# Try / except for scrapping..
-
 
 # Variables
 bot_token = config.bot_token
@@ -83,9 +78,6 @@ for user in users:
         array_of_formatted_prices.sort()
         number_of_resealed_products = len(array_of_formatted_prices)
 
-        # Get the current date
-        # date_scrapped = now.strftime("%d/%m/%Y, %H:%M:%S")
-
         # Create a dict. out of the scraped data
         new_product = {
             'title': title.strip().replace('"', ' Inch'),
@@ -114,19 +106,14 @@ for user in users:
             print('Products array not available yet..')
 
         # Adding the new list of products to the database
-        # for new_product in new_list_of_products:
         db.add_product_data(current_user_id, new_list_of_products)
         print(f"Added ${new_product['title']} for ${current_user_id}..")
 
         if (not old_list_of_products):
             print('Old list is empty')
         else:
-            # print(f'new: {new_list_of_products}, {type(new_list_of_products)}')
-            # print(f'old: {old_list_of_products, type(old_list_of_products)}')
-
             differences = [
                 i for i in new_list_of_products if i not in old_list_of_products]
-            # + [j for j in old_list_of_products if j not in new_list_of_products]
 
             if (not differences):
                 print('No changes.')
@@ -135,7 +122,6 @@ for user in users:
             else:
                 db.overwrite_product_data(
                     current_user_id, new_list_of_products)
-                # print(f'Found this changes: {differences}')
                 for product in differences:
                     print(product['title'])
                 new_product = None
@@ -150,7 +136,6 @@ for user in users:
                 else:
                     product_smallest_resealed_price = 'Nu exista resigilate.'
                 product_url = product['product_url']
-                # product_date_scrapped = date_scrapped
 
                 notification_text = "Salut " + current_user_first_name + ", aparut o modificare la produsul: " + product_title + " |" + " pret: " + \
                     product_original_price + " |" + " cel mai ieftin resigilat: " + \

@@ -53,7 +53,6 @@ def add(update, context):
                 chat_id, text='Exceeded the maximum number of links in the list.')
             return
 
-        # Add the link
         product_links_list.append(url)
         db.add_user(current_user_id, current_user_username,
                     current_user_first_name,  product_links_list)
