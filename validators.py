@@ -18,3 +18,7 @@ def validate_url(url):
         return True
     else:
         return False
+
+
+def domain_validate_url(domain_name, url):
+    return domain_name in url

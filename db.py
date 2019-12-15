@@ -1,5 +1,4 @@
 import pymongo
-import collections
 from pymongo import MongoClient
 
 # Database init

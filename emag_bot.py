@@ -1,16 +1,13 @@
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, InlineQueryHandler, CallbackContext
-from telegram import InlineQueryResultArticle, InputTextMessageContent
-from validators import validate_url
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from validators import validate_url, domain_validate_url
 import re
-import requests
 import os
 import sys
 from threading import Thread
 import db
-# Functions
+import config
 
-# To do
-# Add validation for urls, make sure there are only emag products.
+# Functions
 
 
 def format_url(url):
@@ -24,11 +21,9 @@ def format_url(url):
 def remove_command_prefix(string):
     return re.sub(r'(?=/)(.*)(\s)', '', string)
 
-# Main
-
 
 updater = Updater(
-    token="974325358:AAHMadWgjB59AARPGo95_ASE_ORoPspATLk",  use_context=True)
+    token=config.bot_token,  use_context=True)
 dispatcher = updater.dispatcher
 
 
@@ -44,7 +39,7 @@ def add(update, context):
     print(product_links_list)
     url = format_url(update.message.text)
 
-    if (validate_url(url) is True):
+    if (validate_url(url) is True and domain_validate_url('www.emag.ro', url)):
         if (url in product_links_list):
             context.bot.send_message(
                 chat_id, text='The link is already in the list.')
@@ -148,8 +143,6 @@ dispatcher.add_handler(list_handler)
 # Keep this as last
 unknown_handler = MessageHandler(Filters.command, unknown)
 dispatcher.add_handler(unknown_handler)
-
-print('test')
 
 updater.start_polling()
 print('Started polling..')
