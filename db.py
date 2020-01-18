@@ -4,7 +4,7 @@ from pymongo import MongoClient
 # Database init
 client = MongoClient()
 product_link_list = []
-client = MongoClient('mongodb://localhost:27017')
+client = MongoClient('mongodb://127.0.0.1:27017')
 db = client.emag_scrapper
 users = db.users
 all_users_array = []
@@ -14,8 +14,6 @@ def get_all_users():
     for document in users.find():
         all_users_array.append(document)
     return all_users_array
-
-# To modify from username to telegram id
 
 
 def add_user(telegram_id, username, first_name, urls):
